@@ -485,12 +485,11 @@ Basically, we fill the time between now and 2s from now with hands based off the
 	///If we brought someone back from the dead
 	var/back_from_the_dead = FALSE
 	/// List of trait buffs to give to the affected mob, and remove as needed.
+	/// Note: Crit threshold modification is now handled by status effect, not traits
 	var/static/list/trait_buffs = list(
 		TRAIT_NOCRITDAMAGE,
 		TRAIT_NOCRITOVERLAY,
 		TRAIT_NODEATH,
-		TRAIT_NOHARDCRIT,
-		TRAIT_NOSOFTCRIT,
 		TRAIT_STABLEHEART,
 	)
 
@@ -503,6 +502,9 @@ Basically, we fill the time between now and 2s from now with hands based off the
 		return
 	metabolization_rate = 0.2 * REM
 	affected_mob.add_traits(trait_buffs, type)
+	// Apply status effect to lower crit threshold (allows functioning at lower health)
+	// Reduction amount of 50 allows crit state at -50 instead of 0
+	affected_mob.apply_status_effect(/datum/status_effect/crit_threshold_modifier, 50)
 	affected_mob.set_stat(CONSCIOUS) //This doesn't touch knocked out
 	affected_mob.updatehealth()
 	affected_mob.update_sight()
@@ -542,6 +544,7 @@ Basically, we fill the time between now and 2s from now with hands based off the
 /datum/reagent/inverse/penthrite/on_mob_delete(mob/living/carbon/affected_mob)
 	. = ..()
 	remove_buffs(affected_mob)
+	// Status effect removal is handled in remove_buffs()
 	var/obj/item/organ/heart/heart = affected_mob.get_organ_slot(ORGAN_SLOT_HEART)
 	if(affected_mob.health < -500 || heart.organ_flags & ORGAN_FAILING)//Honestly commendable if you get -500
 		explosion(affected_mob, light_impact_range = 1, explosion_cause = src)
@@ -564,6 +567,7 @@ Basically, we fill the time between now and 2s from now with hands based off the
 
 /datum/reagent/inverse/penthrite/proc/remove_buffs(mob/living/carbon/affected_mob)
 	affected_mob.remove_traits(trait_buffs, type)
+	affected_mob.remove_status_effect(/datum/status_effect/crit_threshold_modifier)
 	affected_mob.remove_movespeed_modifier(/datum/movespeed_modifier/reagent/nooartrium)
 	affected_mob.remove_actionspeed_modifier(/datum/actionspeed_modifier/nooartrium)
 	affected_mob.update_sight()

@@ -572,10 +572,9 @@
 	inverse_chem_val = 0.25
 	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
 	/// List of traits to add/remove from our subject when we are in their system
+	/// Note: Crit threshold modification is now handled by status effect, not traits
 	var/static/list/subject_traits = list(
 		TRAIT_STABLEHEART,
-		TRAIT_NOHARDCRIT,
-		TRAIT_NOSOFTCRIT,
 		TRAIT_NOCRITDAMAGE,
 	)
 
@@ -588,6 +587,9 @@
 	. = ..()
 	send_alert(user)
 	user.add_traits(subject_traits, type)
+	// Apply status effect to lower crit threshold (allows functioning at lower health)
+	// Reduction amount of 50 allows crit state at -50 instead of 0
+	user.apply_status_effect(/datum/status_effect/crit_threshold_modifier, 50)
 
 /datum/reagent/medicine/c2/penthrite/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, times_fired)
 	. = ..()
@@ -613,6 +615,7 @@
 	if(affected_mob.health <= (affected_mob.crit_threshold + HEALTH_THRESHOLD_FULLCRIT*(2*normalise_creation_purity()))) //certain death below this threshold
 		REMOVE_TRAIT(affected_mob, TRAIT_STABLEHEART, type) //we have to remove the stable heart trait before we give them a heart attack
 		affected_mob.remove_traits(subject_traits, type)
+		affected_mob.remove_status_effect(/datum/status_effect/crit_threshold_modifier)
 		to_chat(affected_mob, span_danger("You feel something rupturing inside your chest!"))
 		if(!HAS_TRAIT(affected_mob, TRAIT_ANALGESIA))
 			affected_mob.emote("scream")
@@ -625,10 +628,12 @@
 	. = ..()
 	remove_alert(affected_mob)
 	affected_mob.remove_traits(subject_traits, type)
+	affected_mob.remove_status_effect(/datum/status_effect/crit_threshold_modifier)
 
 /datum/reagent/medicine/c2/penthrite/overdose_process(mob/living/carbon/human/affected_mob, seconds_per_tick, times_fired)
 	. = ..()
 	REMOVE_TRAIT(affected_mob, TRAIT_STABLEHEART, type)
+	affected_mob.remove_status_effect(/datum/status_effect/crit_threshold_modifier)
 	var/need_mob_update
 	need_mob_update = affected_mob.adjustStaminaLoss(10 * REM * seconds_per_tick, updating_stamina = FALSE, required_biotype = affected_biotype)
 	need_mob_update += affected_mob.adjustOrganLoss(ORGAN_SLOT_HEART, 10 * REM * seconds_per_tick, required_organ_flag = affected_organ_flags)
