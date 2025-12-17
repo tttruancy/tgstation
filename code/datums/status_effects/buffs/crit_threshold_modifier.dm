@@ -11,7 +11,7 @@
 	/// The amount to reduce crit_threshold by (positive value = lower threshold)
 	var/reduction_amount
 
-/datum/status_effect/crit_threshold_modifier/on_creation(mob/living/new_owner, reduction = 20)
+/datum/status_effect/crit_threshold_modifier/on_creation(mob/living/new_owner, reduction = BRAVE_BULL_CRIT_THRESHOLD_REDUCTION)
 	reduction_amount = reduction
 	. = ..()
 
